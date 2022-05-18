@@ -2,21 +2,22 @@ package app
 
 import (
 	"io"
-    "net/http"
+	"net/http"
 	"os"
-    "path/filepath"
+	"path/filepath"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/spf13/cast"
-    "github.com/tendermint/spm/openapiconsole"
+	"github.com/tendermint/spm/openapiconsole"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/libs/log"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	dbm "github.com/tendermint/tm-db"
 
+	"github.com/alice/checkers/docs"
 	"github.com/cosmos/cosmos-sdk/baseapp"
-    "github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
+	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/server/api"
@@ -51,9 +52,9 @@ import (
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
 	"github.com/cosmos/cosmos-sdk/x/gov"
+	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 	govkeeper "github.com/cosmos/cosmos-sdk/x/gov/keeper"
 	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types"
-	govclient "github.com/cosmos/cosmos-sdk/x/gov/client"
 	transfer "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer"
 	ibctransferkeeper "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/keeper"
 	ibctransfertypes "github.com/cosmos/cosmos-sdk/x/ibc/applications/transfer/types"
@@ -82,13 +83,12 @@ import (
 	upgradetypes "github.com/cosmos/cosmos-sdk/x/upgrade/types"
 	tmjson "github.com/tendermint/tendermint/libs/json"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
-	"github.com/alice/checkers/docs"
 	// this line is used by starport scaffolding # stargate/app/moduleImport
-		checkersmodule "github.com/alice/checkers/x/checkers"
-		checkersmodulekeeper "github.com/alice/checkers/x/checkers/keeper"
-		checkersmoduletypes "github.com/alice/checkers/x/checkers/types"
+	checkersmodule "github.com/alice/checkers/x/checkers"
+	checkersmodulekeeper "github.com/alice/checkers/x/checkers/keeper"
+	checkersmoduletypes "github.com/alice/checkers/x/checkers/types"
 
-    "github.com/tendermint/spm/cosmoscmd"
+	"github.com/tendermint/spm/cosmoscmd"
 )
 
 const (
@@ -116,7 +116,7 @@ func getGovProposalHandlers() []govclient.ProposalHandler {
 var (
 	// DefaultNodeHome default home directories for the application daemon
 	DefaultNodeHome string
- 
+
 	// ModuleBasics defines the module BasicManager is in charge of setting up basic,
 	// non-dependant module elements, such as codec registration
 	// and genesis verification.
@@ -206,8 +206,8 @@ type App struct {
 	ScopedTransferKeeper capabilitykeeper.ScopedKeeper
 
 	// this line is used by starport scaffolding # stargate/app/keeperDeclaration
-		
-		CheckersKeeper checkersmodulekeeper.Keeper
+
+	CheckersKeeper checkersmodulekeeper.Keeper
 
 	// the module manager
 	mm *module.Manager
@@ -307,8 +307,8 @@ func New(
 
 	// Create IBC Keeper
 	app.IBCKeeper = ibckeeper.NewKeeper(
-        appCodec, keys[ibchost.StoreKey], app.GetSubspace(ibchost.ModuleName), app.StakingKeeper, scopedIBCKeeper,
-    )
+		appCodec, keys[ibchost.StoreKey], app.GetSubspace(ibchost.ModuleName), app.StakingKeeper, scopedIBCKeeper,
+	)
 
 	// register the proposal types
 	govRouter := govtypes.NewRouter()
@@ -333,27 +333,25 @@ func New(
 	// If evidence needs to be handled for the app, set routes in router here and seal
 	app.EvidenceKeeper = *evidenceKeeper
 
-    app.GovKeeper = govkeeper.NewKeeper(
-        appCodec, keys[govtypes.StoreKey], app.GetSubspace(govtypes.ModuleName), app.AccountKeeper, app.BankKeeper,
-        &stakingKeeper, govRouter,
-    )
+	app.GovKeeper = govkeeper.NewKeeper(
+		appCodec, keys[govtypes.StoreKey], app.GetSubspace(govtypes.ModuleName), app.AccountKeeper, app.BankKeeper,
+		&stakingKeeper, govRouter,
+	)
 
-	
-		app.CheckersKeeper = *checkersmodulekeeper.NewKeeper(
-			appCodec,
-			keys[checkersmoduletypes.StoreKey],
-			keys[checkersmoduletypes.MemStoreKey],
-			
-			)
-		checkersModule := checkersmodule.NewAppModule(appCodec, app.CheckersKeeper)
+	app.CheckersKeeper = *checkersmodulekeeper.NewKeeper(
+		appCodec,
+		keys[checkersmoduletypes.StoreKey],
+		keys[checkersmoduletypes.MemStoreKey],
+	)
+	checkersModule := checkersmodule.NewAppModule(appCodec, app.CheckersKeeper)
 
-		// this line is used by starport scaffolding # stargate/app/keeperDefinition
+	// this line is used by starport scaffolding # stargate/app/keeperDefinition
 
-    // Create static IBC router, add transfer route, then set and seal it
-    ibcRouter := porttypes.NewRouter()
-    ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
-    // this line is used by starport scaffolding # ibc/app/router
-    app.IBCKeeper.SetRouter(ibcRouter)
+	// Create static IBC router, add transfer route, then set and seal it
+	ibcRouter := porttypes.NewRouter()
+	ibcRouter.AddRoute(ibctransfertypes.ModuleName, transferModule)
+	// this line is used by starport scaffolding # ibc/app/router
+	app.IBCKeeper.SetRouter(ibcRouter)
 
 	/****  Module Options ****/
 
@@ -562,15 +560,15 @@ func (app *App) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.APIConfig
 	// Register new tx routes from grpc-gateway.
 	authtx.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 	// Register new tendermint queries routes from grpc-gateway.
-    tmservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+	tmservice.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 
 	// Register legacy and grpc-gateway routes for all modules.
 	ModuleBasics.RegisterRESTRoutes(clientCtx, apiSvr.Router)
 	ModuleBasics.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
 
-    // register app's OpenAPI routes.
-    apiSvr.Router.Handle("/static/openapi.yml", http.FileServer(http.FS(docs.Docs)))
-    apiSvr.Router.HandleFunc("/", openapiconsole.Handler(Name, "/static/openapi.yml"))
+	// register app's OpenAPI routes.
+	apiSvr.Router.Handle("/static/openapi.yml", http.FileServer(http.FS(docs.Docs)))
+	apiSvr.Router.HandleFunc("/", openapiconsole.Handler(Name, "/static/openapi.yml"))
 }
 
 // RegisterTxService implements the Application.RegisterTxService method.
@@ -605,9 +603,9 @@ func initParamsKeeper(appCodec codec.BinaryMarshaler, legacyAmino *codec.LegacyA
 	paramsKeeper.Subspace(govtypes.ModuleName).WithKeyTable(govtypes.ParamKeyTable())
 	paramsKeeper.Subspace(crisistypes.ModuleName)
 	paramsKeeper.Subspace(ibctransfertypes.ModuleName)
-    paramsKeeper.Subspace(ibchost.ModuleName)
+	paramsKeeper.Subspace(ibchost.ModuleName)
 	// this line is used by starport scaffolding # stargate/app/paramSubspace
-		paramsKeeper.Subspace(checkersmoduletypes.ModuleName)
+	paramsKeeper.Subspace(checkersmoduletypes.ModuleName)
 
 	return paramsKeeper
 }
